@@ -55,23 +55,35 @@ const AdminDashboard = () => {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const { data: prods } = await api.get('/api/products');
-      const { data: ords } = await api.get('/api/orders');
-      
-      setProducts(prods);
-      setOrders(ords);
+      // Fetch products (publicly accessible)
+      try {
+        const { data: prods } = await api.get('/api/products');
+        setProducts(prods);
+        
+        // Simple stats part 1
+        setStats(prev => ({ ...prev, topProducts: prods.slice(0, 3) }));
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      }
 
-      // Simple stats calculation
-      const revenue = ords.reduce((acc, o) => o.paymentStatus === 'Completed' ? acc + o.totalAmount : acc, 0);
-      setStats({
-        totalOrders: ords.length,
-        totalRevenue: revenue,
-        topProducts: prods.slice(0, 3), // Simplified
-        recentOrders: ords.slice(0, 5)
-      });
+      // Fetch orders (admin only)
+      try {
+        const { data: ords } = await api.get('/api/orders');
+        setOrders(ords);
+
+        const revenue = ords.reduce((acc, o) => o.paymentStatus === 'Completed' ? acc + o.totalAmount : acc, 0);
+        setStats(prev => ({
+          ...prev,
+          totalOrders: ords.length,
+          totalRevenue: revenue,
+          recentOrders: ords.slice(0, 5)
+        }));
+      } catch (err) {
+        console.error('Error fetching orders (maybe not admin?):', err);
+      }
 
     } catch (error) {
-      console.error('Error fetching admin data:', error);
+      console.error('Error in fetchAdminData main loop:', error);
     } finally {
       setLoading(false);
     }
